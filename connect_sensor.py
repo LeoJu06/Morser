@@ -67,7 +67,7 @@ def detect_morse_input():
             # Check if enough pause has passed to recognize a new letter
             if last_press_time is not None and (current_time - last_press_time > LETTER_PAUSE_THRESHOLD):
                 if morse_code:  # If there is already a part of Morse code
-                    print(" ", end="", flush=True)  # Print a space for a new letter
+                    print("/", end="", flush=True)  # Print a space for a new letter
                     last_press_time = None  # Reset to detect a new letter pause
 
             # Short delay to reduce CPU usage
@@ -87,6 +87,46 @@ def detect_morse_input():
         return morse_code
 
 
-# Call the Morse code function and print the result
-morse_code = detect_morse_input()
+
+
+# Wörterbuch zur Umwandlung von Morsecode in Klartext
+MORSE_TO_TEXT = {
+    ".-": "A", "-...": "B", "-.-.": "C", "-..": "D", ".": "E", "..-.": "F",
+    "--.": "G", "....": "H", "..": "I", ".---": "J", "-.-": "K", ".-..": "L",
+    "--": "M", "-.": "N", "---": "O", ".--.": "P", "--.-": "Q", ".-.": "R",
+    "...": "S", "-": "T", "..-": "U", "...-": "V", ".--": "W", "-..-": "X",
+    "-.--": "Y", "--..": "Z", "-----": "0", ".----": "1", "..---": "2",
+    "...--": "3", "....-": "4", ".....": "5", "-....": "6", "--...": "7",
+    "---..": "8", "----.": "9", "/": " "  # Schrägstrich für Leerzeichen
+}
+
+def morse_to_text(morse_code):
+    """
+    Wandelt Morsecode in Klartext um.
+    
+    Args:
+        morse_code (str): Die Morsecode-Zeichenkette, z.B. "... --- ..."
+    
+    Returns:
+        str: Der umgewandelte Klartext
+    """
+    # Teilen der Morsecode-Zeichenkette in Wörter anhand von "   " (drei Leerzeichen)
+    words = morse_code.split("   ")
+    decoded_message = []
+
+    for word in words:
+        # Teilen in einzelne Morsecode-Zeichen anhand von " " (ein Leerzeichen)
+        symbols = word.split(" ")
+        decoded_word = "".join([MORSE_TO_TEXT.get(symbol, "") for symbol in symbols])
+        decoded_message.append(decoded_word)
+
+    return " ".join(decoded_message)
+
+
+# Beispiel zur Umwandlung
+morse_code = detect_morse_input()  # Diese Funktion liefert den Morsecode
 print("\nInput Morse code: ", morse_code)
+
+# Konvertiere Morsecode in Text und gebe ihn aus
+text = morse_to_text(morse_code)
+print("Decoded text: ", text)

@@ -1,71 +1,92 @@
 import grovepi
 import time
 
-# Port-Nummer des Buttons (Digitalport)
-button = 3  # D3, der vierte digitale Port
+# Port number of the button (digital port)
+button = 3  # D3, the fourth digital port
 
-# Button auf INPUT setzen
+# Set the button to input mode
 grovepi.pinMode(button, "INPUT")
 
-# Morsecode-Zeiten definieren
-DOT_DURATION = 0.2  # Dauer eines Punktes in Sekunden
-DASH_DURATION = 0.6  # Dauer eines Strichs in Sekunden
-SYMBOL_PAUSE = 0.5  # Pause zwischen Symbolen (zwischen Punkt und Strich)
-LETTER_PAUSE_THRESHOLD = 1.0  # Pause für Buchstaben (längerer Abstand)
-FINISH_MESSAGE = 4.0
-def detect_morse_input():
-    morse_code = ""
-    press_start = None
-    last_press_time = None
-    message_finished = False
+# Morse code timing definitions
+DOT_DURATION = 0.2  # Duration of a dot in seconds
+DASH_DURATION = 0.6  # Duration of a dash in seconds
+SYMBOL_PAUSE = 0.5  # Pause between symbols (dot or dash)
+LETTER_PAUSE_THRESHOLD = 1.0  # Pause to recognize the start of a new letter
+FINISH_MESSAGE = 4.0  # Duration of pause to signal the end of the message
 
-    print("Morsen gestartet. Drücken Sie den Button, um zu morsen.")
-    
+
+def detect_morse_input():
+    """
+    This function captures user input via a button to generate Morse code.
+    The user can press the button for short or long durations to create dots (.)
+    or dashes (-). A long pause signals the end of the input.
+
+    Function details:
+    - A short press (< DOT_DURATION) registers as a dot.
+    - A longer press (>= DOT_DURATION and < FINISH_MESSAGE) registers as a dash.
+    - A pause greater than LETTER_PAUSE_THRESHOLD between inputs adds a space
+      for a new letter.
+    - A very long pause (>= FINISH_MESSAGE) signals the end of the message.
+
+    Returns:
+        str: The Morse code string generated from the input.
+    """
+    morse_code = ""
+    press_start = None  # Time when the button press started
+    last_press_time = None  # Time of the last button press
+    message_finished = False  # Flag to indicate the message is complete
+
+    print("Morse input started. Press the button to input Morse code.")
+
     try:
         while not message_finished:
+            # Read the button status (1 = pressed, 0 = not pressed)
             button_state = grovepi.digitalRead(button)
-            current_time = time.time()
+            current_time = time.time()  # Get the current time
 
-            if button_state == 1:  # Button gedrückt
+            if button_state:  # Button is pressed
                 if press_start is None:
-                    press_start = current_time  # Startzeit des Drückens
-            else:  # Button nicht gedrückt
-                if press_start is not None:  # Button wurde losgelassen
-                    press_duration = current_time - press_start
-                    press_start = None
+                    press_start = current_time  # Record the start time of the press
+            else:  # Button is not pressed
+                if press_start is not None:  # If the button was previously pressed
+                    press_duration = current_time - press_start  # Calculate press duration
+                    press_start = None  # Reset for the next press
 
-                    # Punkt oder Strich bestimmen
+                    # Determine if the input is a dot or a dash
                     if press_duration < DOT_DURATION:
-                        morse_code += "."
+                        morse_code += "."  # Short press → dot
                         print(".", end="", flush=True)
                     elif press_duration >= FINISH_MESSAGE:
-                        message_finished = True
-
+                        message_finished = True  # Long pause → end of message
                     else:
-                        morse_code += "-"
+                        morse_code += "-"  # Longer press → dash
                         print("-", end="", flush=True)
-                    
-                    last_press_time = current_time
 
-            # Überprüfen, ob genug Pause vergangen ist, um einen neuen Buchstaben zu beginnen
+                    last_press_time = current_time  # Save the time of the last input
+
+            # Check if enough pause has passed to recognize a new letter
             if last_press_time is not None and (current_time - last_press_time > LETTER_PAUSE_THRESHOLD):
-                if morse_code:
-                    print(" ", end="", flush=True)
-                    last_press_time = None
+                if morse_code:  # If there is already a part of Morse code
+                    print(" ", end="", flush=True)  # Print a space for a new letter
+                    last_press_time = None  # Reset to detect a new letter pause
 
-            time.sleep(0.05)  # Kurze Wartezeit für CPU-Entlastung
-                
+            # Short delay to reduce CPU usage
+            time.sleep(0.05)
+
     except KeyboardInterrupt:
-        print("\nProgramm beendet.")
+        # End the program on keyboard interrupt (CTRL + C)
+        print("\nProgram terminated.")
         return morse_code
 
     except IOError:
-        print("Fehler beim Lesen des Buttons.")
+        # Error handling for button read issues
+        print("Error reading the button.")
 
+    # Return the Morse code when the message is finished
     if message_finished:
         return morse_code
 
-# Die Morsecode-Funktion aufrufen
-morse_code = detect_morse_input()
-print("\nEingehender Morsecode: ", morse_code)
 
+# Call the Morse code function and print the result
+morse_code = detect_morse_input()
+print("\nInput Morse code: ", morse_code)

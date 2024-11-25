@@ -1,18 +1,27 @@
 import grovepi
+import grove_rgb_lcd as lcd
 import time
 
-# Port number of the button (digital port)
+# Port number for the button (digital port)
 button = 3  # D3, the fourth digital port
 
-# Set the button to input mode
+# Port number for the buzzer (digital port)
+buzzer = 0  # D4, the fifth digital port
+
+# Port number for the LED (digital port)
+led = 2  # D2, the sixth digital port
+
+# Set the button to input mode, buzzer and LED to output mode
 grovepi.pinMode(button, "INPUT")
+grovepi.pinMode(buzzer, "OUTPUT")
+grovepi.pinMode(led, "OUTPUT")
 
 # Morse code timing definitions
 DOT_DURATION = 0.2  # Duration of a dot in seconds
 DASH_DURATION = 0.6  # Duration of a dash in seconds
 SYMBOL_PAUSE = 0.5  # Pause between symbols (dot or dash)
 LETTER_PAUSE_THRESHOLD = 1.0  # Pause to recognize the start of a new letter
-FINISH_MESSAGE = 4.0  # Duration of pause to signal the end of the message
+FINISH_MESSAGE = 3.0  # Duration of pause to signal the end of the message
 
 
 def detect_morse_input():
@@ -20,13 +29,6 @@ def detect_morse_input():
     This function captures user input via a button to generate Morse code.
     The user can press the button for short or long durations to create dots (.)
     or dashes (-). A long pause signals the end of the input.
-
-    Function details:
-    - A short press (< DOT_DURATION) registers as a dot.
-    - A longer press (>= DOT_DURATION and < FINISH_MESSAGE) registers as a dash.
-    - A pause greater than LETTER_PAUSE_THRESHOLD between inputs adds a space
-      for a new letter.
-    - A very long pause (>= FINISH_MESSAGE) signals the end of the message.
 
     Returns:
         str: The Morse code string generated from the input.
@@ -47,7 +49,11 @@ def detect_morse_input():
             if button_state:  # Button is pressed
                 if press_start is None:
                     press_start = current_time  # Record the start time of the press
+                grovepi.digitalWrite(buzzer, 1)  # Activate the buzzer
+                grovepi.digitalWrite(led, 1)  # Turn on the LED
             else:  # Button is not pressed
+                grovepi.digitalWrite(buzzer, 0)  # Deactivate the buzzer
+                grovepi.digitalWrite(led, 0)  # Turn off the LED
                 if press_start is not None:  # If the button was previously pressed
                     press_duration = current_time - press_start  # Calculate press duration
                     press_start = None  # Reset for the next press
@@ -75,18 +81,22 @@ def detect_morse_input():
 
     except KeyboardInterrupt:
         # End the program on keyboard interrupt (CTRL + C)
+        grovepi.digitalWrite(buzzer, 0)  # Ensure the buzzer is turned off
+        grovepi.digitalWrite(led, 0)  # Ensure the LED is turned off
         print("\nProgram terminated.")
         return morse_code
 
     except IOError:
         # Error handling for button read issues
+        grovepi.digitalWrite(buzzer, 0)  # Ensure the buzzer is turned off
+        grovepi.digitalWrite(led, 0)  # Ensure the LED is turned off
         print("Error reading the button.")
 
     # Return the Morse code when the message is finished
     if message_finished:
+        grovepi.digitalWrite(buzzer, 0)  # Ensure the buzzer is turned off
+        grovepi.digitalWrite(led, 0)  # Ensure the LED is turned off
         return morse_code
-
-
 
 
 # Wörterbuch zur Umwandlung von Morsecode in Klartext
@@ -130,3 +140,7 @@ print("\nInput Morse code: ", morse_code)
 # Konvertiere Morsecode in Text und gebe ihn aus
 text = morse_to_text(morse_code)
 print("Decoded text: ", text)
+
+# Zeige die Nachricht auf dem Display
+lcd.setText(text)  # Setze den Text auf dem Display
+lcd.setRGB(0, 255, 0)  # Setze eine grüne Hintergrundfarbe

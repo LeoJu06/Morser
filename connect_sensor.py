@@ -18,7 +18,7 @@ grovepi.pinMode(led, "OUTPUT")
 
 # Morse code timing definitions
 DOT_DURATION = 0.2  # Duration of a dot in seconds
-DASH_DURATION = 0.6  # Duration of a dash in seconds
+DASH_DURATION = 0.5  # Duration of a dash in seconds
 LETTER_PAUSE_THRESHOLD = 1.0  # Pause to recognize the start of a new letter
 FINISH_MESSAGE = 3.0  # Duration of pause to signal the end of the message
 
@@ -65,6 +65,7 @@ def detect_morse_input():
                         print(".", end="", flush=True)
                     elif press_duration >= DASH_DURATION:
                         morse_code += "-"  # Longer press → dash
+                      
                         print("-", end="", flush=True)
 
                     last_press_time = current_time  # Save the time of the last input

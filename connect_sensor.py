@@ -5,10 +5,12 @@ import sqlite3
 import smtplib
 from email.mime.text import MIMEText
 import requests
+from send_email import send_email
+
 
 # Port configuration
 button = 3  # D3
-buzzer = 0  # D4
+buzzer = 0 # D4
 led = 2  # D2
 
 # Set the button to input mode, buzzer and LED to output mode
@@ -17,8 +19,8 @@ grovepi.pinMode(buzzer, "OUTPUT")
 grovepi.pinMode(led, "OUTPUT")
 
 # Morse code timing definitions
-DOT_DURATION = 0.2
-DASH_DURATION = 0.4
+DOT_DURATION = 0.15
+DASH_DURATION = 0.25
 LETTER_PAUSE_THRESHOLD = 1.0
 FINISH_MESSAGE = 3.0
 
@@ -102,24 +104,13 @@ def morse_to_text(morse_code):
     return " ".join(decoded_message)
 
 
-# Send via email
-def send_email(message, recipient="leo.junghans6@gmail.com"):
-    sender_email = "leo.junghans@ksk.ch"
-    sender_password = "Test"
-    msg = MIMEText(message)
-    msg['Subject'] = "Morse Message"
-    msg['From'] = sender_email
-    msg['To'] = recipient
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-        server.login(sender_email, sender_password)
-        server.send_message(msg)
-        print("Email sent successfully!")
 
 
 
 # Main program
 if __name__ == "__main__":
     morse_code = detect_morse_input()
+    
     print("\nInput Morse code: ", morse_code)
     text = morse_to_text(morse_code)
     print("Decoded text: ", text)
@@ -130,5 +121,4 @@ if __name__ == "__main__":
     except OSError:
         lcd.setText(text)
 
-    send_email(text)
-   
+    send_email(subject="Morse Code send from Rasbpy", body=text)  

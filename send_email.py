@@ -4,7 +4,22 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import yaml
 
-def send_email(sender_email, sender_password, recipient_email, subject, body, smtp_server="smtp.gmail.com", smtp_port=587):
+
+# Lade die YAML-Datei
+with open("config.yaml", "r") as file:
+    config = yaml.safe_load(file)
+
+# Hole die Zugangsdaten
+email_credentials = config["email_credentials"]
+leo_mail = email_credentials["email"]
+leos_password = email_credentials["password"]
+
+# Versende die E-Mail
+recipient_email = "Andrin.hugentobler@hotmail.com"
+subject = "Mail send from my Raspby"
+body = "Second mail from my raspby"
+
+def send_email(subject, body, sender_email=leo_mail, sender_password=leos_password, recipient_email=recipient_email, smtp_server="smtp.gmail.com", smtp_port=587):
     """
     Versendet eine E-Mail mit den angegebenen Parametern.
 
@@ -57,18 +72,6 @@ def send_email(sender_email, sender_password, recipient_email, subject, body, sm
 if __name__ == "__main__":
 
 
-    # Lade die YAML-Datei
-    with open("config.yaml", "r") as file:
-        config = yaml.safe_load(file)
-
-    # Hole die Zugangsdaten
-    email_credentials = config["email_credentials"]
-    leo_mail = email_credentials["email"]
-    leos_password = email_credentials["password"]
-
-    # Versende die E-Mail
-    recipient_email = leo_mail
-    subject = "Mail send from my Raspby"
-    body = "Second mail from my raspby"
+    
 
     send_email(leo_mail, leos_password, recipient_email, subject, body)

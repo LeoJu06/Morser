@@ -1,34 +1,32 @@
-"""Module to connect with raspy"""
+"""
+Module for detecting Morse code input via a Raspberry Pi using GrovePi components.
+This module converts the Morse code into text, displays the text on an LCD,
+and sends the message via email.
+"""
 
 import grovepi
 import grove_rgb_lcd as lcd
 import time
-import sqlite3
 import smtplib
 from email.mime.text import MIMEText
-import requests
 from send_email import send_email
 
-
 # Port configuration
-button = 3  # D3
-buzzer = 0 # D4
-led = 2  # D2
+BUTTON_PORT = 3  # D3 for the button
+BUZZER_PORT = 0  # D4 for the buzzer
+LED_PORT = 2     # D2 for the LED
 
-# Set the button to input mode, buzzer and LED to output mode
-grovepi.pinMode(button, "INPUT")
-grovepi.pinMode(buzzer, "OUTPUT")
-grovepi.pinMode(led, "OUTPUT")
+# Configure GrovePi ports
+# Set button to input mode, buzzer and LED to output mode
+grovepi.pinMode(BUTTON_PORT, "INPUT")
+grovepi.pinMode(BUZZER_PORT, "OUTPUT")
+grovepi.pinMode(LED_PORT, "OUTPUT")
 
 # Morse code timing definitions
-DOT_DURATION = 0.15
-DASH_DURATION = 0.25
-LETTER_PAUSE_THRESHOLD = 1.0
-FINISH_MESSAGE = 3.0
-
-# Telegram configuration
-TELEGRAM_BOT_TOKEN = "DEIN_BOT_TOKEN"
-TELEGRAM_CHAT_ID = "DEIN_CHAT_ID"
+DOT_DURATION = 0.15         # Duration of a dot (short press) in seconds
+DASH_DURATION = 0.25        # Minimum duration of a dash (long press) in seconds
+LETTER_PAUSE_THRESHOLD = 1.0  # Pause threshold to indicate end of a letter in seconds
+FINISH_MESSAGE = 3.0        # Duration to indicate the end of the message
 
 # Morse-to-text dictionary
 MORSE_TO_TEXT = {
@@ -38,89 +36,111 @@ MORSE_TO_TEXT = {
     "...": "S", "-": "T", "..-": "U", "...-": "V", ".--": "W", "-..-": "X",
     "-.--": "Y", "--..": "Z", "-----": "0", ".----": "1", "..---": "2",
     "...--": "3", "....-": "4", ".....": "5", "-....": "6", "--...": "7",
-    "---..": "8", "----.": "9", "/": " "  # Slash for spaces between letters
+    "---..": "8", "----.": "9", "/": " "  # Slash for spaces between words
 }
 
 def detect_morse_input():
+    """
+    Detects Morse code input from a button connected to the Raspberry Pi.
+
+    Returns:
+        str: The detected Morse code sequence as a string of dots (.) and dashes (-).
+    """
     morse_code = ""
     press_start = None
     last_press_time = None
     message_finished = False
+
     print("Morse input started. Press the button to input Morse code.")
     try:
         while not message_finished:
-            button_state = grovepi.digitalRead(button)
+            button_state = grovepi.digitalRead(BUTTON_PORT)
             current_time = time.time()
+
             if button_state:
                 if press_start is None:
                     press_start = current_time
-                grovepi.digitalWrite(buzzer, 1)
-                grovepi.digitalWrite(led, 1)
+                grovepi.digitalWrite(BUZZER_PORT, 1)
+                grovepi.digitalWrite(LED_PORT, 1)
+
                 if (current_time - press_start) >= FINISH_MESSAGE:
                     message_finished = True
                     print("\nMessage finished due to long press")
             else:
-                grovepi.digitalWrite(buzzer, 0)
-                grovepi.digitalWrite(led, 0)
+                grovepi.digitalWrite(BUZZER_PORT, 0)
+                grovepi.digitalWrite(LED_PORT, 0)
+
                 if press_start is not None:
                     press_duration = current_time - press_start
                     press_start = None
+
                     if press_duration < DOT_DURATION:
                         morse_code += "."
                         print(".", end="", flush=True)
                     elif press_duration >= DASH_DURATION:
                         morse_code += "-"
                         print("-", end="", flush=True)
+
                     last_press_time = current_time
+
             if last_press_time is not None and ((current_time - last_press_time) > LETTER_PAUSE_THRESHOLD):
-                if morse_code and not morse_code.endswith(" "):
+                if morse_code and not morse_code.endswith("/"):
                     morse_code += "/"
                     print("/", end="", flush=True)
                 last_press_time = None
+
             if last_press_time is not None and (current_time - last_press_time >= FINISH_MESSAGE):
                 message_finished = True
                 print("\nMessage finished due to inactivity")
+
             time.sleep(0.05)
+
     except KeyboardInterrupt:
-        grovepi.digitalWrite(buzzer, 0)
-        grovepi.digitalWrite(led, 0)
-        print("\nProgram terminated.")
-        return morse_code
+        print("\nProgram terminated by user.")
     except IOError:
-        grovepi.digitalWrite(buzzer, 0)
-        grovepi.digitalWrite(led, 0)
         print("Error reading the button.")
-    if message_finished:
-        grovepi.digitalWrite(buzzer, 0)
-        grovepi.digitalWrite(led, 0)
-        return morse_code
+    finally:
+        grovepi.digitalWrite(BUZZER_PORT, 0)
+        grovepi.digitalWrite(LED_PORT, 0)
+
+    return morse_code
 
 def morse_to_text(morse_code):
-    morse_code = morse_code.replace("/", " ")
-    words = morse_code.split("   ")
+    """
+    Converts a Morse code string into plain text.
+
+    Args:
+        morse_code (str): The Morse code string to decode.
+
+    Returns:
+        str: The decoded plain text message.
+    """
+    morse_code = morse_code.replace("/", " ")  # Replace slashes with spaces
+    words = morse_code.split("   ")  # Split Morse code into words
     decoded_message = []
+
     for word in words:
         symbols = word.split()
         decoded_word = "".join([MORSE_TO_TEXT.get(symbol, "") for symbol in symbols])
         decoded_message.append(decoded_word)
+
     return " ".join(decoded_message)
 
-
-
-
-
-# Main program
 if __name__ == "__main__":
+    # Detect Morse code input
     morse_code = detect_morse_input()
-    
-    print("\nInput Morse code: ", morse_code)
+    print("\nInput Morse code:", morse_code)
+
+    # Convert Morse code to text
     text = morse_to_text(morse_code)
-    print("Decoded text: ", text)
+    print("Decoded text:", text)
+
+    # Display the decoded text on the LCD
     try:
         lcd.setText(text)
-        time.sleep(0.2)
         lcd.setRGB(0, 255, 0)
     except OSError:
-        lcd.setText(text)
+        print("Error displaying text on LCD.")
 
-    send_email(subject="Morse Code send from Rasbpy", body=text)  
+    # Send the decoded text via email
+    send_email(subject="Morse Code Message from Raspberry Pi", body=text)

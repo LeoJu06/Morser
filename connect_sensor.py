@@ -1,3 +1,5 @@
+"""Module to connect with raspy"""
+
 import grovepi
 import grove_rgb_lcd as lcd
 import time
